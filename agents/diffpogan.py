@@ -161,9 +161,7 @@ class DiffpoGAN(object):
             self.lambda_lr_scheduler = CosineAnnealingLR(
                 self.LA_optimizer, T_max=lr_maxt, eta_min=0.0
             )
-            # self.discri_lr_scheduler = CosineAnnealingLR(
-            #     self.discri_optimizer, T_max=lr_maxt, eta_min=0.0
-            # )
+
 
         self.state_dim = state_dim
         self.max_action = max_action
@@ -229,10 +227,7 @@ class DiffpoGAN(object):
 
             log_li = self.log_likelihood(gen_para, jac, self.prior) / batch_size
 
-            # print("state",state)
-            # print("gen_para", gen_para)
-            # print("jac",jac)
-            # print("log_li", log_li)
+
 
 
 
@@ -242,18 +237,12 @@ class DiffpoGAN(object):
             ex_state, ex_action,_, _,_ = replay_buffer.sample(
                 batch_size
             )
-            # print(state,state.shape)
-            # print(ex_state,ex_state.shape)
-            # exit()
+
             """ Q Training """
             current_q1, current_q2 = self.critic(state, action)
             true_samples1 = torch.cat([state, action], dim=1)
             true_samples2 = torch.cat([ex_state, ex_action], dim=1)
             true_samples = torch.cat([true_samples1, true_samples2], dim=0)
-            # print(true_samples1.shape)
-            # print(true_samples2.shape)
-            # print(true_samples.shape)
-            # exit()
 
             ############################## flow-GAN
             real_data=true_samples.to(torch.float32)
@@ -277,14 +266,7 @@ class DiffpoGAN(object):
                 next_action_rpt = (next_action_rpt).clamp(
                     -self.max_action, self.max_action
                 )
-                # action_rpt = (action_rpt).clamp(
-                #     -self.max_action, self.max_action
-                # )
 
-                # # fake_samples = torch.cat([next_state_rpt, next_action_rpt], dim=1)
-                # # next_state_choo, next_action_choo = self.choose_rpt(next_state_rpt, next_action_rpt, repeats=10, dim=0)
-                # fake_samples1 = torch.cat([next_state_rpt, next_action_rpt], dim=1)
-                # fake_samples2 = torch.cat([state_rpt, action_rpt], dim=1)
                 state_rpt = torch.repeat_interleave(state, repeats=10, dim=0)
                 action_rpt = self.ema_model(state_rpt)
                 action_rpt = (action_rpt).clamp(
@@ -301,17 +283,7 @@ class DiffpoGAN(object):
                 target_q1 = target_q1.view(batch_size, 10).max(dim=1, keepdim=True)[0]
                 target_q2 = target_q2.view(batch_size, 10).max(dim=1, keepdim=True)[0]
                 target_q = torch.min(target_q1, target_q2)
-                # print("next_state_rpt",next_state_rpt.shape)
-                # print("state_rpt",state_rpt.shape)
-                # print("next_action_rpt",next_action_rpt.shape)
-                # print("action_rpt",action_rpt.shape)
-                # print("fake_samples_all",fake_samples_all.shape)
-                # print("next_fake_samples_all",next_fake_samples_all.shape)
-                # print("fake_samples1",fake_samples1.shape)
-                # print("fake_samples2",fake_samples2.shape)
-                # print("target_q1",target_q1.shape)
-                # print("target_q2",target_q2.shape)
-                # exit()
+
             else:
                 next_action = (self.ema_model(next_state)).clamp(
                     -self.max_action, self.max_action
@@ -380,9 +352,7 @@ class DiffpoGAN(object):
             else:
                 d_loss = d_loss_real+d_loss_fake
             ############################## flow-GAN
-            # print(fake_ac.shape)
-            # exit()
-            
+
 
 
             
@@ -422,20 +392,6 @@ class DiffpoGAN(object):
                 fake_samples3 = torch.cat([state, new_action], dim=1)
                 fake_samples = torch.cat([fake_samples2, fake_samples3], dim=0)
                 c_fake_ac = self.discri(fake_samples)
-                # fake_labels = torch.zeros(fake_samples.size(0), 1, device=self.device)
-                # true_labels = torch.rand(size=(true_samples.size(0), 1), device=self.device) * (
-                #         1.0 - 0.80) + 0.80  # [0.80, 1.0)
-
-                # real_loss = self.dis_loss(real_ac, true_labels)
-
-                # fake_loss = self.dis_loss(fake_ac, fake_labels)
-
-                # discriminator_loss = (real_loss + fake_loss) / 2
-                # # discriminator_loss = -real_ac.mean() + fake_ac.mean()
-                # self.discri_optimizer.zero_grad()
-                # discriminator_loss.backward(retain_graph=True)
-                # self.discri_optimizer.step()
-
                 ##############################    flow-GAN
                 ### Vanilla gan loss
                 D_logits1_ = c_fake_ac
@@ -470,31 +426,11 @@ class DiffpoGAN(object):
                     q_loss = -q1_new_action.mean() / q2_new_action.abs().mean().detach()
                 else:
                     q_loss = -q2_new_action.mean() / q1_new_action.abs().mean().detach()
-                # q_loss = - q1_new_action.mean()
-                # actor_loss = (
-                #     self.LA.clamp(self.LA_min, self.LA_max).detach() * kl_loss + q_loss
-                # )
-                # ap = (real_ac.mean()/fake_ac.mean()).detach()
-                # ap = - torch.log(ap)
-                # print("sssssss")
-                # print(real_ac.mean())
-                # print("fake_ac.mean()",fake_ac.mean())
-                # print("ap",ap)
-                # print('generator_loss',generator_loss)
-                # exit()
-                # print(kl_loss.shape())
-                # exit()
+
                 actor_loss = (
-                        # ap*(kl_loss + q_loss) + generator_loss
-                    # 0.2 * (c_fake_ac.mean()/real_ac.mean()).detach()*(kl_loss) + q_loss + generator_loss * 0.1
-                    #   1113
-                    # (c_fake_ac.mean()/real_ac.mean()).detach()*(kl_loss) + q_loss + generator_loss * 0.1
-                    # (c_fake_ac.mean()/real_ac.mean()).detach()*(kl_loss) + q_loss + generator_loss*self.gama
-                    # (c_fake_ac.mean()/real_ac.mean()).detach() * (self.kl_alpha * kl_loss) + 
+
                     (c_fake_ac.mean()/real_ac.mean()).detach() * (self.kl_alpha * kl_loss) + q_loss + torch.log(generator_loss)*self.gama
-                    # (self.kl_alpha * kl_loss) + q_loss + torch.log(generator_loss)*self.gama
-                    # (self.kl_alpha * (c_fake_ac.mean()/real_ac.mean())).clamp(self.LA_min, self.LA_max).detach() * ( kl_loss) + q_loss + torch.log(generator_loss)*self.gama
-                    
+
                 )
                 
                 self.actor_optimizer.zero_grad()
@@ -512,14 +448,7 @@ class DiffpoGAN(object):
 
                 """ Lambda loss"""
 
-                # LA_loss = (self.target_kl - kl_loss).detach() * self.LA
-                # self.LA_optimizer.zero_grad()
-                # LA_loss.backward()
-                # # if self.grad_norm > 0:
-                # LA_grad_norms = nn.utils.clip_grad_norm_(
-                #     self.LA, max_norm=self.grad_norm, norm_type=2
-                # )
-                # self.LA_optimizer.step()
+
 
                 metric["actor_loss"].append(actor_loss.item())
                 metric["kl_loss"].append(kl_loss.item())
@@ -540,9 +469,7 @@ class DiffpoGAN(object):
                 metric["log_li"].append(log_li.item())
                 metric["gen_loss_log"].append((torch.log(generator_loss)*self.gama).item())
                 metric["g_loss"].append(g_loss.item())
-                # metric["ap"].append(ap.item())
 
-                # metric["Lambda"].append(self.LA.clamp(self.LA_min, self.LA_max).item())
 
             """ Step Target network """
             if self.step % self.update_ema_every == 0:
@@ -566,9 +493,7 @@ class DiffpoGAN(object):
                     log_writer.add_scalar(
                         "Critic Grad Norm", critic_grad_norms.max().item(), self.step
                     )
-                    # log_writer.add_scalar(
-                    #     "Lambda Grad Norm", LA_grad_norms.max().item(), self.step
-                    # )
+
                 log_writer.add_scalar("KL Loss", kl_loss.item(), self.step)
                 log_writer.add_scalar("real_ac", real_ac.mean().item(), self.step)
                 log_writer.add_scalar("fake_ac", fake_ac.mean().item(), self.step)
@@ -585,11 +510,7 @@ class DiffpoGAN(object):
                 log_writer.add_scalar(
                     "generator_loss", generator_loss.item(), self.step
                 )
-                # log_writer.add_scalar(
-                #     "Lambda",
-                #     self.LA.clamp(self.LA_min, self.LA_max).item(),
-                #     self.step,
-                # )
+
   
         if self.lr_decay:
             self.actor_lr_scheduler.step()
