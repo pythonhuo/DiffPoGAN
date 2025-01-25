@@ -1,1 +1,1 @@
-# DiffPoGAN
+# DMGDP
